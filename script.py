@@ -1,3 +1,5 @@
+import time
+
 import tellcore.telldus as td
 import tellcore.constants as const
 
@@ -75,3 +77,9 @@ core = td.TelldusCore()
 print_devices(core.devices())
 print("")
 print_sensors(core.sensors())
+
+while True:
+    core.devices()[0].turn_on()
+    time.sleep(5)
+    core.devices()[0].turn_off()
+    time.sleep(5)
