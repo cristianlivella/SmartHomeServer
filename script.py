@@ -2,6 +2,7 @@ import time
 
 import tellcore.telldus as td
 import tellcore.constants as const
+import paho.mqtt.client as mqtt
 
 def print_devices(devices):
     print("Number of devices: {}\n".format(len(devices)))
@@ -71,6 +72,24 @@ def print_sensors(sensors):
         print("{:<15s} {:<15s} {:<5d} {}{}".format(
             sensor.protocol, sensor.model, sensor.id, values_str,
             timestamp))
+
+def on_message(client, userdata, message):
+    print(str(message.payload) + ' - ' + message.topic)
+
+    if message.topic == 'su-dsv/iot22/6-5/actuators/0':
+        if message.payload.decode('utf-8') == '1':
+            core.devices()[0].turn_on()
+        else:
+            core.devices()[0].turn_off()
+    elif message.topic == 'su-dsv/iot22/6-5/actuators/1':
+        if message.payload.decode('utf-8') == '1':
+            core.devices()[1].turn_on()
+        else:
+            core.devices()[1].turn_off()
+
+client = mqtt.Client()
+client.connect('test.mosquitto.org')
+client.on_message=on_message
 
 core = td.TelldusCore()
 
