@@ -73,6 +73,15 @@ def print_sensors(sensors):
             sensor.protocol, sensor.model, sensor.id, values_str,
             timestamp))
 
+def sensor_event(protocol, model, id_, dataType, value, timestamp, cid):
+    print('Received event ' + str(id_) + ', ' + str(dataType) + ', ' + str(value))
+
+    if dataType == 1:
+        print('Temperature: ' + str(value))
+    elif dataType == 2:
+        print('Humidity: ' + str(value))
+
+
 def on_message(client, userdata, message):
     print(str(message.payload) + ' - ' + message.topic)
 
@@ -91,14 +100,20 @@ client = mqtt.Client()
 client.connect('test.mosquitto.org')
 client.on_message=on_message
 
-core = td.TelldusCore()
+# callback dispatcher
+dispatcher = td.QueuedCallbackDispatcher()
+
+core = td.TelldusCore(callback_dispatcher=dispatcher)
+core.register_sensor_event(sensor_event)
 
 print_devices(core.devices())
 print("")
 print_sensors(core.sensors())
 
 while True:
-    core.devices()[0].turn_on()
-    time.sleep(5)
-    core.devices()[0].turn_off()
-    time.sleep(5)
+    #core.devices()[0].turn_on()
+    #time.sleep(5)
+    #core.devices()[0].turn_off()
+    #print_sensors(core.sensors())
+    core.callback_dispatcher.process_pending_callbacks()
+    time.sleep(30)
