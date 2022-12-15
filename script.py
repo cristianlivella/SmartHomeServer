@@ -4,6 +4,14 @@ import tellcore.telldus as td
 import tellcore.constants as const
 import paho.mqtt.client as mqtt
 
+from loguru import logger
+
+BROKER = 'test.mosquitto.org'
+BASE_TOPIC = 'su-dsv/iot22/6-5/'
+
+
+temperature_setpoint = 0
+
 def print_devices(devices):
     print("Number of devices: {}\n".format(len(devices)))
     print("{:<5s} {:<25s} {:<10s} {:<10s} {:<20s} {}".format(
@@ -73,32 +81,66 @@ def print_sensors(sensors):
             sensor.protocol, sensor.model, sensor.id, values_str,
             timestamp))
 
+def on_connect(client, userdata, flags, rc):
+    if rc==0:
+        logger.debug('Connection established. Code: ' + str(rc))
+    else:
+        logger.debug('Connection failed. Code: ' + str(rc))
+
+def on_publish(client, userdata, mid):
+    logger.debug('Published: ' + str(mid))
+
+def on_disconnect(client, userdata, rc):
+    if rc != 0:
+        logger.debug('Unexpected disconnection. Code: ', str(rc))
+    else:
+        logger.debug('Disconnected. Code: ' + str(rc))
+
+def on_log(client, userdata, level, buf):
+    logger.debug('MQTT Log: ' + str(buf))
+
 def sensor_event(protocol, model, id_, dataType, value, timestamp, cid):
     print('Received event ' + str(id_) + ', ' + str(dataType) + ', ' + str(value))
 
-    if dataType == 1:
-        print('Temperature: ' + str(value))
-    elif dataType == 2:
-        print('Humidity: ' + str(value))
+    if id_ === 135:
+        if dataType == 1:
+            print('Temperature: ' + str(value))
+            client.publish(BASE_TOPIC + 'temperature', value)
+        elif dataType == 2:
+            print('Humidity: ' + str(value))
+            client.publish(BASE_TOPIC + 'humidity', value)
 
 
 def on_message(client, userdata, message):
-    print(str(message.payload) + ' - ' + message.topic)
+    logger.debug('Message received: ' + str(message.payload) + ', on topic ' + message.topic)
 
-    if message.topic == 'su-dsv/iot22/6-5/actuators/0':
+    if message.topic == BASE_TOPIC + 'actuators/0':
         if message.payload.decode('utf-8') == '1':
             core.devices()[0].turn_on()
+            client.publish(BASE_TOPIC + 'actuators/0/status', '1', retain=True)
         else:
             core.devices()[0].turn_off()
-    elif message.topic == 'su-dsv/iot22/6-5/actuators/1':
+            client.publish(BASE_TOPIC + 'actuators/0/status', '0', retain=True)
+    elif message.topic == BASE_TOPIC + 'actuators/1':
         if message.payload.decode('utf-8') == '1':
             core.devices()[1].turn_on()
+            client.publish(BASE_TOPIC + 'actuators/1/status', '1', retain=True)
         else:
             core.devices()[1].turn_off()
+            client.publish(BASE_TOPIC + 'actuators/1/status', '0', retain=True)
+    elif message.topic == BASE_TOPIC + 'temperature-setpoint':
+        temperature_setpoint = float(message.payload)
+        client.publish(message.topic + '/status', str(temperature_setpoint))
 
 client = mqtt.Client()
-client.connect('test.mosquitto.org')
+client.on_connect = on_connect
+client.on_disconnect = on_disconnect
+client.on_publish = on_publish
+client.on_log = on_log
 client.on_message=on_message
+
+client.connect(BROKER)
+
 
 # callback dispatcher
 dispatcher = td.QueuedCallbackDispatcher()
@@ -106,9 +148,6 @@ dispatcher = td.QueuedCallbackDispatcher()
 core = td.TelldusCore(callback_dispatcher=dispatcher)
 core.register_sensor_event(sensor_event)
 
-print_devices(core.devices())
-print("")
-print_sensors(core.sensors())
 
 while True:
     #core.devices()[0].turn_on()
