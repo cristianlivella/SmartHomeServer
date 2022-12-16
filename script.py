@@ -23,7 +23,7 @@ def get_humidity():
 def sensor_event(protocol, model, id_, dataType, value, timestamp, cid):
     logger.debug('Received event ' + str(id_) + ', ' + str(dataType) + ', ' + str(value))
 
-    if id_ === 135:
+    if id_ == 135:
         if dataType == 1:
             on_receive_real_temperature(value)
         elif dataType == 2:
