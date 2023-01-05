@@ -10,6 +10,7 @@ MQTT_BROKER = 'test.mosquitto.org'
 MQTT_BASE_TOPIC = 'su-dsv/iot22/6-5/'
 
 HYSTERESIS = 0.3
+TEMPERATURE_SENSOR_ID = 135
 
 current_temperature = 0
 temperature_setpoint = 0
@@ -17,14 +18,14 @@ temperature_setpoint = 0
 ### START TELLDUS SECTION
 def get_temperature():
     for sensor in core.sensors():
-        if str(sensor.id == 135):
+        if str(sensor.id == TEMPERATURE_SENSOR_ID):
             return sensor.value(const.TELLSTICK_TEMPERATURE).value
 
     return '0'
 
 def get_humidity():
     for sensor in core.sensors():
-        if str(sensor.id == 135):
+        if str(sensor.id == TEMPERATURE_SENSOR_ID):
             return sensor.value(const.TELLSTICK_HUMIDITY).value
 
     return '0'
@@ -32,7 +33,7 @@ def get_humidity():
 def sensor_event(protocol, model, id_, dataType, value, timestamp, cid):
     logger.debug('Received event ' + str(id_) + ', ' + str(dataType) + ', ' + str(value))
 
-    if id_ == 135:
+    if id_ == TEMPERATURE_SENSOR_ID:
         if dataType == 1:
             on_receive_real_temperature(value)
         elif dataType == 2:
@@ -62,23 +63,18 @@ def on_message(client, userdata, message):
 
     logger.debug('Message received: ' + str(message.payload) + ', on topic ' + message.topic)
 
-    if message.topic == MQTT_BASE_TOPIC + 'actuators/0':
-        if message.payload.decode('utf-8') == '1':
-            core.devices()[0].turn_on()
-            client.publish(MQTT_BASE_TOPIC + 'actuators/0/status', '1', retain=True)
+    if 'actuators' in message.topic:
+        actuatorId = int(message.topic.split('/')[-1]) - 1
+
+        if message.payload.decode('utf-8')  == '1':
+            core.devices()[actuatorId].turn_on()
+            client.publish(message.topic + '/status', '1', retain=True)
         else:
-            core.devices()[0].turn_off()
-            client.publish(MQTT_BASE_TOPIC + 'actuators/0/status', '0', retain=True)
-    elif message.topic == MQTT_BASE_TOPIC + 'actuators/1':
-        if message.payload.decode('utf-8') == '1':
-            core.devices()[1].turn_on()
-            client.publish(MQTT_BASE_TOPIC + 'actuators/1/status', '1', retain=True)
-        else:
-            core.devices()[1].turn_off()
-            client.publish(MQTT_BASE_TOPIC + 'actuators/1/status', '0', retain=True)
-    elif message.topic == MQTT_BASE_TOPIC + 'temperature-setpoint':
+            core.devices()[actuatorId].turn_off()
+            client.publish(message.topic + '/status', '0', retain=True)
+    elif 'temperature-setpoint' in message.topic:
         temperature_setpoint = float(message.payload)
-        client.publish(message.topic + '/status', str(temperature_setpoint))
+        client.publish(message.topic + '/status', str(temperature_setpoint), retain=True)
 
 ### OTHER FUNCTIONS
 def on_receive_real_temperature(value):
