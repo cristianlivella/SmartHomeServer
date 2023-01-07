@@ -18,14 +18,14 @@ temperature_setpoint = 0
 ### START TELLDUS SECTION
 def get_temperature():
     for sensor in core.sensors():
-        if str(sensor.id == TEMPERATURE_SENSOR_ID):
+        if str(sensor.id) == str(TEMPERATURE_SENSOR_ID):
             return sensor.value(const.TELLSTICK_TEMPERATURE).value
 
     return '0'
 
 def get_humidity():
     for sensor in core.sensors():
-        if str(sensor.id == TEMPERATURE_SENSOR_ID):
+        if str(sensor.id) == str(TEMPERATURE_SENSOR_ID):
             return sensor.value(const.TELLSTICK_HUMIDITY).value
 
     return '0'
@@ -96,6 +96,12 @@ client.on_publish = on_publish
 client.on_log = on_log
 client.on_message=on_message
 client.connect(MQTT_BROKER)
+
+# Start the MQTT loop and subscribe to the topics
+client.loop_start()
+client.subscribe(BASE_TOPIC + 'actuators/1')
+client.subscribe(BASE_TOPIC + 'actuators/2')
+client.subscribe(BASE_TOPIC + 'temperature-setpoint')
 
 # Create Tellstick callback dispatcher
 dispatcher = td.QueuedCallbackDispatcher()
