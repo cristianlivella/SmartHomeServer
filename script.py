@@ -6,8 +6,8 @@ import paho.mqtt.client as mqtt
 
 from loguru import logger
 
-MQTT_BROKER = 'test.mosquitto.org'
-MQTT_BASE_TOPIC = 'su-dsv/iot22/6-5/'
+MQTT_BROKER = 'test.mosquitto.org'      # Insert the broker's TCP address
+MQTT_BASE_TOPIC = 'base_topic/'         # Insert the base topic
 
 HYSTERESIS = 0.3
 TEMPERATURE_SENSOR_ID = 135
